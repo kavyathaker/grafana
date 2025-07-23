@@ -1,0 +1,37 @@
+name: Deploy Grafana via Docker Compose
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docker-compose.yml'
+      - '.github/workflows/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create .env from secrets
+        run: |
+          echo "GF_AUTH_GENERIC_OAUTH_CLIENT_ID=${{ secrets.GF_AUTH_GENERIC_OAUTH_CLIENT_ID }}" >> .env
+          echo "GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=${{ secrets.GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET }}" >> .env
+          echo "GF_AUTH_GENERIC_OAUTH_SCOPES=${{ secrets.GF_AUTH_GENERIC_OAUTH_SCOPES }}" >> .env
+          echo "GF_AUTH_GENERIC_OAUTH_AUTH_URL=${{ secrets.GF_AUTH_GENERIC_OAUTH_AUTH_URL }}" >> .env
+          echo "GF_AUTH_GENERIC_OAUTH_TOKEN_URL=${{ secrets.GF_AUTH_GENERIC_OAUTH_TOKEN_URL }}" >> .env
+          echo "GF_SERVER_ROOT_URL=${{ secrets.GF_SERVER_ROOT_URL }}" >> .env
+
+      - name: Run Grafana with Docker Compose
+        run: |
+          docker-compose down || true
+          docker-compose up -d
+
+      - name: Check if Grafana is running
+        run: curl --fail http://localhost:3000 || (echo "Grafana failed to start" && exit 1)
